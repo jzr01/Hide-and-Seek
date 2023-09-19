@@ -4,140 +4,110 @@ using UnityEngine;
 
 public class HideScipt : MonoBehaviour
 {
- 
-    public float normalspeed;
-    public float sprintspeed;
+    public float maxspeed;
     private float speed;
 
-    public float stmina = 3.0f;
-    public float relaxtime = 4.0f;
-
-    private float timesincesprint = 0.0f;
-    private float timesincerelax = 0.0f;
-
     private Collider[] hitcolliders;
-    private RaycastHit Hit;
-
+    public Rigidbody rb;
+    private bool seeplayer;
     public float detectrange;
 
-    public Rigidbody rb;
-    public GameObject target;
+    public GameObject target1;
+    public GameObject target2;
 
-    private bool seeseeker;
+    private Vector3 lastPosition;
 
-    public float directionChangeInterval = 2f; // Time in seconds before changing direction
-
-    private float timeSinceLastDirectionChange = 0.0f;
-    private Vector3 currentDirection = Vector3.forward.normalized;
-
-    private Vector3 lastKnownHiderPosition;
-
-
-    // Start is called before the first frame update
+    private List<GameObject> target_list = new List<GameObject>();
     void Start()
     {
-        speed = normalspeed;
+        speed = maxspeed;
+        lastPosition = transform.position;
     }
 
     // Update is called once per frame
     void Update()
     {
-        // detect if there a hider in range 
-        if (!seeseeker)
+        lastPosition = transform.position;
+        if (!seeplayer)
         {
-            speed = normalspeed;
-            // Move the object in the current direction
-            transform.Translate(currentDirection * speed * Time.deltaTime);
-
-            // Update the timer
-            timeSinceLastDirectionChange += Time.deltaTime;
-
-            // Check if it's time to change direction
-            if (timeSinceLastDirectionChange >= directionChangeInterval)
-            {
-                // Change to a new random direction
-                currentDirection = Random.insideUnitSphere.normalized;
-
-                // Reset the timer
-                timeSinceLastDirectionChange = 0.0f;
-            }
-
+    
             hitcolliders = Physics.OverlapSphere(transform.position, detectrange);
-            foreach (var hitcollider in hitcolliders)
+            foreach (var hitcollider in hitcolliders )
             {
                 if (hitcollider.tag == "Seeker")
                 {
-                    target = hitcollider.gameObject;
-                    seeseeker = true;
-                    lastKnownHiderPosition = target.transform.position;
+                    target_list.Add(hitcollider.gameObject);
+                    seeplayer = true;
                 }
             }
         }
         else
         {
 
-            if (timesincesprint <= stmina)
+            if (target_list.Count == 1)
             {
-                speed = sprintspeed;
-                timesincesprint += Time.deltaTime;
+                target1 = target_list[0];
+                var Heading = target1.transform.position - transform.position;
+                var Distance  = Heading.magnitude;
+                var Direction = Heading / Distance;
+
+
+                Vector3 Move = new Vector3(-Direction.x*speed,0,-Direction.z*speed);
+                rb.velocity = Move;
+
+                transform.forward  =  Move;
             }
             else
             {
-                if (timesincerelax < relaxtime)
-                {
-                    speed = normalspeed;
-                    timesincerelax += Time.deltaTime;
+                target1 = target_list[0];
+                target2 = target_list[1];
+                var A= target1.transform.position - transform.position;
+                var B = target2.transform.position - transform.position;
+                var Distance1 = A.magnitude;
+                var Distance2 = B.magnitude;
+   
+                float theta = Mathf.Atan2(Vector3.Magnitude(Vector3.Cross(A, B)), Vector3.Dot(A, B));
+                
+                float theta1 = (2*Mathf.PI-theta)*Distance2/(Distance1+Distance2);
 
-                }
-                else
-                {
-                    speed = sprintspeed;
-                    timesincesprint = 0.0f;
-                    timesincerelax = 0.0f;
-                }
+                float sinAngle = Mathf.Sin(theta1);
+                float cosAngle = Mathf.Cos(theta1);
 
+                float newX= A.x * cosAngle - A.z * sinAngle;
+                float newZ = A.x * sinAngle + A.z * cosAngle;
+                var Heading = new Vector3(newX, 0, newZ);
+
+                var Direction = Heading / Heading.magnitude;
+
+
+                Vector3 Move = new Vector3(Direction.x*speed,0,Direction.z*speed);
+                rb.velocity = Move;
+
+                transform.forward  =  Move;
             }
-
-
-            var Heading = target.transform.position - transform.position;
-            var Distance = Heading.magnitude;
-            var Direction = Heading / Distance;
-
-
-            Vector3 Move = new Vector3(-Direction.x * speed, 0, -Direction.z * speed);
-            rb.velocity = Move;
-            transform.forward = Move;
-
-            seeseeker = false;
-
-            hitcolliders = Physics.OverlapSphere(transform.position, detectrange);
-            foreach (var hitcollider in hitcolliders)
-            {
-                if (hitcollider.tag == "Seeker")
-                {
-                    target = hitcollider.gameObject;
-                    seeseeker = true;
-                }
-            }
+            
         }
-
     }
 
-    // Collision detection with the Hider
     void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Seeker"))
-        {
-            normalspeed = 0;
-            sprintspeed = 0;
-        }
-        else if (collision.gameObject.CompareTag("Wall"))
-        {
-            // Calculate the reflection vector off the wall
-            Vector3 normal = collision.contacts[0].normal;
-            currentDirection = Vector3.Reflect(currentDirection, normal);
-        }
-    }
+            {
+                if (collision.gameObject.CompareTag("Seeker"))
+                {
+                    speed = 0;
+                }
+                
+                else if (collision.gameObject.CompareTag("Wall"))
+                {
+                    Debug.Log("Hit the wall");
+                    Vector3 normal = collision.contacts[0].normal;
+                    Debug.Log("Last Position: "+lastPosition);
+                    Debug.Log("Current Position: "+transform.position);
+                    Vector3 currentDirection = transform.position - lastPosition;
+                    Debug.Log("Current Direction: "+currentDirection);
 
+                    Vector3 afterdirection = Vector3.Reflect(currentDirection,normal);
+                    Debug.Log("Afterward Direction: "+afterdirection);
+                }
+            }
 }
 
