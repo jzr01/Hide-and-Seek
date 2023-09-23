@@ -66,12 +66,12 @@ public class HideScipt : MonoBehaviour
         wall_number_list[1] = wall_list.Count;
 
 
-        if (target_list.Count == 0)
+        if (target_list.Count == 0) //no seeker
         {
             //move randomly aroud the map
         }
 
-        else if (target_list.Count == 1)
+        else if (target_list.Count == 1) //One seeker
         {
             target1 = target_list[0];
             var Heading = target1.transform.position - transform.position;
@@ -89,7 +89,36 @@ public class HideScipt : MonoBehaviour
                 
                 if (wall_number_list[1] - wall_number_list[0] == 2)
                 {
-                   //This will never happend 
+                    Debug.Log("Open space to Corner.");
+                    wall = wall_list[0];
+
+                    Vector3 cD =  transform.forward;
+                    Vector3 wD = wall.transform.forward;
+                    float total_angle = Mathf.Atan2(Vector3.Magnitude(Vector3.Cross(cD, wD)), Vector3.Dot(cD, wD));
+                    float delta_angle;
+
+                    Debug.Log("Open space to wall" + wall+wall_list[1]);
+                    if (total_angle >= Mathf.PI/2)
+                    {
+                        total_angle = Mathf.PI - total_angle; 
+                        cw = true;
+                    }
+
+                    if (total_angle != 0)
+                    {
+                        if (total_angle <= Mathf.PI/2)
+                        {
+                            total_angle = Mathf.PI - total_angle;
+                        }
+                        float d_to_wall = walldetectrange;
+                        float time = d_to_wall/(speed*Time.deltaTime);
+                        delta_angle = total_angle/time;
+
+                        angle = delta_angle;
+                        Direction = rotate(lastDirection,delta_angle,cw);
+                    }
+
+                    old_wall = wall;
                 }
                 else if (wall_number_list[1] - wall_number_list[0] == 1)
                 {
@@ -130,7 +159,11 @@ public class HideScipt : MonoBehaviour
 
                     if (total_angle != 0)
                     {
-                        float d_to_wall = walldetectrange/(Mathf.Sin(total_angle));
+                        if (total_angle <= Mathf.PI/2)
+                        {
+                            total_angle = Mathf.PI - total_angle;
+                        }
+                        float d_to_wall = walldetectrange;
                         float time = d_to_wall/(speed*Time.deltaTime);
                         delta_angle = total_angle/time;
 
@@ -156,7 +189,8 @@ public class HideScipt : MonoBehaviour
             }
 
         }
-        else
+
+        else //two seekers
         {
             target1 = target_list[0];
             target2 = target_list[1];
@@ -167,7 +201,6 @@ public class HideScipt : MonoBehaviour
             var Distance2 = B.magnitude;
 
             float theta = Mathf.Atan2(Vector3.Magnitude(Vector3.Cross(A, B)), Vector3.Dot(A, B));
-
 
             float slope = (target1.transform.position.z - target2.transform.position.z) / (target1.transform.position.x - target2.transform.position.x);
             float intersection = target1.transform.position.z - slope * target1.transform.position.x;
@@ -195,7 +228,104 @@ public class HideScipt : MonoBehaviour
                     Direction = Getangle(theta, Distance1, Distance2, B);
                 }
             }
-            
+
+
+            if (wall_number_list[1] == 0)
+            {
+                if (wall_number_list[0] != 0)
+                {
+                    Debug.Log("No wall");
+                }
+            }
+            else
+            {
+                if (wall_number_list[1] - wall_number_list[0] == 2)
+                {
+                //This will never happend 
+                }
+                else if (wall_number_list[1] - wall_number_list[0] == 1)
+                {
+                    if (old_wall == null)
+                    {
+                        wall = wall_list[0];
+                    }
+                    else
+                    {
+                        foreach (GameObject wallob in wall_list)
+                            if (wallob != old_wall)
+                            {
+                                wall = wallob;
+                            }
+                    }
+
+                    // var C = target2.transform.position - target1.transform.position;
+                    // float D = C.magnitude;
+                    // if (D >= walldetectrange && theta >= Mathf.PI/2)
+                    // {
+                    //     Debug.Log("Run towards them");
+                    //     Direction = Getangle(theta, Distance1, Distance2, B);
+                    // }
+                    // else
+                    // {
+
+                        Vector3 cD =  transform.forward;
+                        Vector3 wD = wall.transform.forward;
+                        float total_angle = Mathf.Atan2(Vector3.Magnitude(Vector3.Cross(cD, wD)), Vector3.Dot(cD, wD));
+                        float delta_angle;
+
+                        if (wall_number_list[0] == 0)
+                        {   
+                            Debug.Log("Open space to wall" + wall);
+                            if (total_angle >= Mathf.PI/2)
+                            {
+                                total_angle = Mathf.PI - total_angle; 
+                                cw = true;
+                            }
+
+                        }
+                        else
+                        {
+                            if (total_angle <= Mathf.PI/2)
+                            {
+                                total_angle = Mathf.PI - total_angle; 
+                                cw = true;
+                            }
+                            Debug.Log("Wall to corner "+wall);
+                            Debug.Log(total_angle/Mathf.PI*180);
+                        }
+
+                        if (total_angle != 0)
+                        {
+                            //need to be optimized
+                            float d_to_wall = walldetectrange;
+                            Debug.Log(Mathf.Sin(total_angle));
+
+                            float time = d_to_wall/(speed*Time.deltaTime);
+                            delta_angle = total_angle/time;
+
+                            angle = delta_angle;
+                            Direction = rotate(lastDirection,delta_angle,cw);
+                        }
+                    //}
+                        
+
+                    old_wall = wall;
+                }
+                else
+                {
+                    Debug.Log("Still have wall");
+                    //Vector3 v1 = transform.position - target1.transform.position ;
+                    Vector3 v1 = transform.forward;
+                    Vector3 v2 = wall.transform.forward;
+                    if (Mathf.Approximately(Vector3.Dot(v1, v2), 1.0f) || Mathf.Approximately(Vector3.Dot(v1, v2), -1.0f))
+                    {
+                        angle = 0;
+                    }
+                    Direction = rotate(lastDirection,angle,cw);
+                    
+                }
+            }
+
         }
 
         Vector3 Move = new Vector3(Direction.x * speed, 0, Direction.z * speed);

@@ -13,8 +13,10 @@ public class SeekerScript : MonoBehaviour
     public Rigidbody rb;
     public GameObject target;
 
-    private bool seeplayer;
-
+    public bool seeplayer;
+    Vector3 LasthiderPosition = new Vector3(float.NaN, float.NaN, float.NaN);
+    Vector3 Heading;
+    private Vector3 nullVector = new Vector3(float.NaN, float.NaN, float.NaN);
 
     // Start is called before the first frame update
     void Start()
@@ -25,32 +27,46 @@ public class SeekerScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        seeplayer = false;
+        hitcolliders = Physics.OverlapSphere(transform.position, detectrange);
+        foreach (var hitcollider in hitcolliders )
+        {
+            if (hitcollider.tag == "Hider")
+            {
+                target = hitcollider.gameObject;
+                seeplayer = true;
+            }
+        }
         // detect if there a hider in range 
         if (!seeplayer)
         {
-            hitcolliders = Physics.OverlapSphere(transform.position, detectrange);
-            foreach (var hitcollider in hitcolliders )
+            if (LasthiderPosition == nullVector )
             {
-                if (hitcollider.tag == "Hider")
+                //random move
+            }
+            else
+            {
+                Heading = LasthiderPosition - transform.position;
+                if (Heading.magnitude < 0.0001f)
                 {
-                    target = hitcollider.gameObject;
-                    seeplayer = true;
-                }
+                    LasthiderPosition =nullVector ;
+                }  
             }
         }
         else
         {
-            var Heading = target.transform.position - transform.position;
-            var Distance  = Heading.magnitude;
-            var Direction = Heading / Distance;
+            Heading = target.transform.position - transform.position;
 
-
-            Vector3 Move = new Vector3(Direction.x*speed,0,Direction.z*speed);
-            rb.velocity = Move;
-
-            transform.forward  =  Move;
-
+            LasthiderPosition = target.transform.position ;
         }
+
+
+        var Distance  = Heading.magnitude;
+        var Direction = Heading / Distance;
+        Vector3 Move = new Vector3(Direction.x*speed,0,Direction.z*speed);
+        rb.velocity = Move;
+
+        transform.forward  =  Move;
     }
 
  // Collision detection with the Hider
